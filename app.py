@@ -11,13 +11,23 @@ SERVICE_ACCOUNT_FILE = 'service_account.json'
 
 @st.cache_resource
 def authenticate_google_drive():
-    if not os.path.exists(SERVICE_ACCOUNT_FILE):
-        st.error(f"找不到 {SERVICE_ACCOUNT_FILE}！請確保已放置服務帳號金鑰檔。")
-        return None
+    """進行身分驗證：優先讀取 Streamlit Cloud Secrets，若無則讀取本地 service_account.json"""
+    creds = None
     
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
-    )
+    # 1. 優先讀取 Streamlit Cloud 上的 Secrets 設定
+    if "gcp_service_account" in st.secrets:
+        creds = service_account.Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=SCOPES
+        )
+    # 2. 本地電腦開發環境 (讀取 service_account.json)
+    elif os.path.exists(SERVICE_ACCOUNT_FILE):
+        creds = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES
+        )
+    else:
+        st.error("找不到驗證金鑰！請在 Streamlit Cloud 設定 Secrets，或在本地放置 service_account.json。")
+        return None
+
     return build('drive', 'v3', credentials=creds)
 
 def get_all_accessible_folders(service):
