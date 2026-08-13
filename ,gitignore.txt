@@ -1,0 +1,12 @@
+# 絕不能上傳的金鑰與憑證檔
+service_account.json
+credentials.json
+token.json
+
+# Streamlit 本地設定與密碼檔
+.streamlit/secrets.toml
+
+# Python 自動生成的暫存檔
+__pycache__/
+*.pyc
+.env
