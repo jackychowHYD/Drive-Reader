@@ -1,7 +1,7 @@
 import os
 import io
 import json
-import re  # 👈 新增正則表達式模組
+import re
 import streamlit as st
 import pandas as pd
 from google.oauth2 import service_account
@@ -13,7 +13,7 @@ SERVICE_ACCOUNT_FILE = 'service_account.json'
 
 @st.cache_resource
 def authenticate_google_drive():
-    """進行身分驗證：同時支援 Streamlit Secrets 與本地 service_account.json"""
+    """進行身分驗證：同時支援 Streamlit Secrets 與本地 service_account.json，並自動修復私鑰換行"""
     creds = None
     
     # 1. 優先讀取 Streamlit Cloud 的 Secrets
@@ -21,14 +21,16 @@ def authenticate_google_drive():
         secret_val = st.secrets["gcp_service_account"]
         
         try:
-            # 如果 Secrets 貼的是 JSON 字串
+            # 解析 Secrets 內容
             if isinstance(secret_val, str):
-                # 💡 自動將 } 或 ] 前面多餘的逗號刪除
                 cleaned_str = re.sub(r',(\s*[\}\]])', r'\1', secret_val)
                 info = json.loads(cleaned_str)
-            # 如果 Secrets 用的是 TOML 字典格式
             else:
                 info = dict(secret_val)
+            
+            # 💡 核心修復：把純文字 '\\n' 自動還原為真正加密簽署需要的換行符號 '\n'
+            if "private_key" in info:
+                info["private_key"] = info["private_key"].replace("\\n", "\n")
                 
             creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
         except Exception as e:
