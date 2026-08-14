@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import re  # 👈 新增正則表達式模組
 import streamlit as st
 import pandas as pd
 from google.oauth2 import service_account
@@ -22,14 +23,16 @@ def authenticate_google_drive():
         try:
             # 如果 Secrets 貼的是 JSON 字串
             if isinstance(secret_val, str):
-                info = json.loads(secret_val)
+                # 💡 自動將 } 或 ] 前面多餘的逗號刪除
+                cleaned_str = re.sub(r',(\s*[\}\]])', r'\1', secret_val)
+                info = json.loads(cleaned_str)
             # 如果 Secrets 用的是 TOML 字典格式
             else:
                 info = dict(secret_val)
                 
             creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
         except Exception as e:
-            st.error(f"❌ Secrets 金鑰解析失敗！請檢查 Streamlit Secrets 的格式是否符合規範。\n錯誤訊息: {str(e)}")
+            st.error(f"❌ Secrets 金鑰解析失敗！錯誤訊息: {str(e)}")
             return None
         
     # 2. 本地開發環境 (讀取 service_account.json)
