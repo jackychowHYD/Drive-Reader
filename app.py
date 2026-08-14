@@ -12,21 +12,25 @@ SERVICE_ACCOUNT_FILE = 'service_account.json'
 
 @st.cache_resource
 def authenticate_google_drive():
-    """進行身分驗證：同時支援 Streamlit Secrets (JSON/TOML) 與本地 service_account.json"""
+    """進行身分驗證：同時支援 Streamlit Secrets 與本地 service_account.json"""
     creds = None
     
     # 1. 優先讀取 Streamlit Cloud 的 Secrets
     if "gcp_service_account" in st.secrets:
         secret_val = st.secrets["gcp_service_account"]
         
-        # 如果使用者貼的是原始 JSON 字串
-        if isinstance(secret_val, str):
-            info = json.loads(secret_val)
-        # 如果使用者用的是 TOML 字典格式
-        else:
-            info = dict(secret_val)
-            
-        creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+        try:
+            # 如果 Secrets 貼的是 JSON 字串
+            if isinstance(secret_val, str):
+                info = json.loads(secret_val)
+            # 如果 Secrets 用的是 TOML 字典格式
+            else:
+                info = dict(secret_val)
+                
+            creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+        except Exception as e:
+            st.error(f"❌ Secrets 金鑰解析失敗！請檢查 Streamlit Secrets 的格式是否符合規範。\n錯誤訊息: {str(e)}")
+            return None
         
     # 2. 本地開發環境 (讀取 service_account.json)
     elif os.path.exists(SERVICE_ACCOUNT_FILE):
